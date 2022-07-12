@@ -9,8 +9,48 @@ from loss import (
 from tqdm.notebook import tqdm
 
 class ChromaGAN:
+    """
+    Class that represents ChromaGAN model (see the ChromaGAN paper).
+
+    Attributes
+    ----------
+    image_shape
+        shape of image, two numbers (no channel)
+    input_ab_shape
+        shape of ag (missing color channels for grayscale) image, typically image_shape with 2 channels
+    input_L_shape
+        shape of L (grayscale) image, typically image_shape with 1 channel
+    generator_input_shape
+        shape of generator image input, typically image shape with 3 channels
+    discriminator
+        discriminator model
+    vgg16
+        vgg16 backbone
+    generator
+        generator model
+    discriminator_model
+        discriminator constructed and compiled in a way (connected) that it can be used during training
+    network
+        whole network for training (includes generator too)
+    generator_loss
+        log of generator loss
+    discriminator_loss
+        log of discriminator loss
+    """
     
     def __init__(self, image_shape=(224, 224), classes=20, vgg16_without_top=None):
+        """
+        Initializes model for given shape and classes.
+
+        Parameters
+        ----------
+        image_shape
+            two numbers that specify image shape, usually (224, 224)
+        classes
+            number of classes in the dataset
+        vgg16_without_top
+            if None then loads vgg16 by default, otherwise use this parameter
+        """
         
         # in constructor we need to take generator, discriminator, join them up and setup any additional stuff
         
@@ -82,6 +122,21 @@ class ChromaGAN:
         self.discriminator_loss = []
         
     def train_one_epoch(self, train_dataset, valid, fake, dummy):
+        """
+        Trains one epoch.
+
+        Parameters
+        ----------
+        train_dataset
+            train dataset, usually tf.keras.utils.Sequence
+        valid
+            valid labels for discriminator
+        fake
+            fake labels for discriminator
+        dummy
+            dummy labels for discriminator
+        """
+        
         
         for batch_i in tqdm(range(len(train_dataset))):
             
@@ -107,6 +162,22 @@ class ChromaGAN:
         
         
     def train(self, train_dataset, test_dataset, epochs=30, save=True, display_test_image_results=True):
+        """
+        Trains the whole model.
+
+        Parameters
+        ----------
+        train_dataset
+            train dataset, usually tf.keras.utils.Sequence
+        test_dataset
+            test dataset (usually called validation), usually tf.keras.utils.Sequence
+        epochs
+            number of epochs to train for
+        save
+            whether to save the model
+        display_test_image_results
+            whether to gradually display image results
+        """
         
         # create dummy, fake, and real values for discriminator to train
         valid = np.ones((train_dataset.batch_size, 1))
@@ -133,6 +204,16 @@ class ChromaGAN:
                                  
                             
     def display_colorized_samples(self, test_dataset, batch_i=0):
+        """
+        Displays colorized samples.
+
+        Parameters
+        -----------
+        test_dataset
+            test dataset (usually called validation), usually tf.keras.utils.Sequence
+        batch_i
+            index of batch to display
+        """
         
         gray_imgs, color_imgs, gray_lab_imgs, color_lab_imgs, encoded_labels, labels = test_dataset[batch_i]
         colorized = self.__class__.colorize(self.generator, gray_lab_imgs)
@@ -148,6 +229,16 @@ class ChromaGAN:
     
     @classmethod
     def colorize(cls, generator, imgs_L):
+        """
+        Class method that takes generator and colorizes L images (grayscale).
+        
+        Parameters
+        ------------
+        generator
+            generator to use for colorization, usually pass generator attribute from trained model
+        imgs_L
+            grayscale (L) imgs to colorize
+        """
         
         imgs_ab, _ = generator.predict(np.tile(imgs_L, [1, 1, 1, 3]))
         # we NEED to depreprocess BEFORE reconstruction (joining them back) because
@@ -158,6 +249,16 @@ class ChromaGAN:
         
     @staticmethod
     def create_discriminator(input_ab_shape, input_L_shape):
+        """
+        Static method to create discriminator for given shapes.
+
+        Parameters
+        -----------
+        input_ab_shape
+            shape of predicted image (two channels)
+        input_L_shape
+            shape of grayscale image
+        """
         
         # a is geometric color information
         # b is semantic color information
@@ -165,8 +266,6 @@ class ChromaGAN:
         input_ab = tf.keras.Input(shape=input_ab_shape, name='discriminator_geometric/semantic_input')
         input_L = tf.keras.Input(shape=input_L_shape, name='discriminator_grayscale_input')
         discriminator = tf.keras.layers.concatenate([input_L, input_ab])
-        
-        # TODO maybe add batch normalization but not for first layer
         
         discriminator = tf.keras.layers.Conv2D(
             64, (4, 4), padding='same', strides=(2, 2), activation=tf.keras.layers.LeakyReLU(alpha=0.2)
@@ -184,7 +283,6 @@ class ChromaGAN:
             512, (4, 4), padding='same', strides=(1, 1), activation=tf.keras.layers.LeakyReLU(alpha=0.2)
         )(discriminator) # (28, 28, 512)
         
-        # TODO maybe rewrite
         discriminator = tf.keras.layers.Conv2D(
             1, (4, 4), padding='same', strides=(1, 1), activation='sigmoid'
         )(discriminator) # (28, 28, 1)
@@ -193,6 +291,18 @@ class ChromaGAN:
         
     @staticmethod
     def create_generator(input_shape, vgg16_without_top, classes=20):
+        """
+        Static method to create generator for given shape.
+
+        Parameters
+        ----------
+        input_shape
+            input image shape
+        vgg16_without_top
+            vgg16 model without top (used as backbone)
+        classes
+            number of classes to use
+        """
         
         input_layer = tf.keras.Input(shape=input_shape)
         # take only subset of the layers of vgg16
@@ -260,6 +370,7 @@ class ChromaGAN:
         
     @classmethod
     def create_vgg16(cls, input_shape, include_top=False):
+        """Class method that creates vgg16 with imagenet weights"""
         
         # pretrained vgg16 on imagenet usable as backbone or predictor for generator!
         # it is also possible to load it, further finetune it on other dataset (natural color)
