@@ -3,6 +3,8 @@ import skimage.color
 import numpy as np
 
 def plot_learning_curves(d_loss, g_loss):
+    """Plot learning curves of discriminator and generator."""
+
     plt.plot(d_loss)
     plt.plot(g_loss)
     plt.ylim(ymax=np.max([d_loss, g_loss]), ymin=0)
@@ -11,6 +13,7 @@ def plot_learning_curves(d_loss, g_loss):
     plt.show()
     
 def depreprocess(imgs):
+    """Depreprocess image."""
     
     imgs *= 255
     imgs[imgs > 255] = 255
@@ -18,6 +21,7 @@ def depreprocess(imgs):
     return imgs
 
 def reconstruct(gray_lab_imgs, color_lab_imgs):
+    """Reconstruct image converting from lab color space to rgb."""
     
     return skimage.color.lab2rgb(np.concatenate((gray_lab_imgs, color_lab_imgs), axis=3))
     

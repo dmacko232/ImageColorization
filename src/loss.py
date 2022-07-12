@@ -2,10 +2,12 @@ import tensorflow as tf
 import numpy as np
 
 def wasserstein_generator_loss(real_img, fake_img, **kwargs):
+    """Wasserstein generator loss."""
     
     return tf.keras.backend.mean(fake_img)
 
 def wasserstein_discriminator_loss(real_img, fake_img, **kwargs):
+    """Wasserstein discrimnator loss."""
     
     return tf.keras.backend.mean(fake_img)
     # return tf.keras.backend.mean(fake_img) - tf.keras.backend.mean(real_img)
@@ -14,6 +16,8 @@ def wasserstein_discriminator_loss(real_img, fake_img, **kwargs):
 # https://stackoverflow.com/questions/59039886/get-randomly-weighted-averages-between-samples-in-a-batch-with-arbitrary-sample
 # https://stackoverflow.com/questions/58133430/how-to-substitute-keras-layers-merge-merge-in-tensorflow-keras
 class RandomWeightedAverage(tf.keras.layers.Layer):
+    """Layer that performs random weighted average of images."""
+
     def __init__(self):
         super().__init__()
         self.batch_size = 16 # TODO hardcoded FIX THIS
@@ -27,6 +31,7 @@ class RandomWeightedAverage(tf.keras.layers.Layer):
 
 # https://stackoverflow.com/questions/61058119/implementing-gradient-penalty-loss-with-tensorflow-2
 class GradientPenaltyLoss(tf.keras.losses.Loss):
+    """Gradient penalty loss."""
     
     def __init__(self, averaged_imgs, gradient_penalty_weight=10):
         
