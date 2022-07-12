@@ -10,6 +10,7 @@ import skimage.transform
 import skimage.io
 
 def build_dataframe(colorful_dirpath: str, gray_dirpath: str) -> pd.DataFrame:
+    """Builds dataframe of all images contained"""
     
     result = []
     for label in os.listdir(gray_dirpath):
@@ -23,6 +24,30 @@ def build_dataframe(colorful_dirpath: str, gray_dirpath: str) -> pd.DataFrame:
     return pd.DataFrame(result, columns=["gray_path", "colorful_path", "label"])
 
 class DataLoader(tf.keras.utils.Sequence):
+    """
+    Data Loader class.
+    
+    Attributes
+    -----------
+    df
+        dataframe with all the information
+    dim
+        dimension of images
+    batch_size
+        size of batch
+    training
+        flag that signals if dataset is training
+    n_classes
+        classes in the data
+    label_indices
+        mapping of label to label index (int)
+    n
+        number of data
+    seed
+        fixed seed
+    encoded_clases
+        classes one hot encoded
+    """
     
     def __init__(self,
                  df: pd.DataFrame,
@@ -31,6 +56,9 @@ class DataLoader(tf.keras.utils.Sequence):
                  training=True,
                  seed=0
                 ):
+        """
+        Construct data loader with given parameters.
+        """
     
         self.df = df                           # description of input samples
         self.dim = dim                         # input image size
@@ -53,11 +81,12 @@ class DataLoader(tf.keras.utils.Sequence):
         self.on_epoch_end()
 
     def __len__(self):
-        ' get number of batches in one epoch '
+        """Returns number of batches in one epoch"""
         
         return self.n // self.batch_size
         
     def __getitem__(self, index):
+        """Gets whole batch under given index."""
         
         index_start = index * self.batch_size
         index_end = (index + 1) * self.batch_size
@@ -80,17 +109,19 @@ class DataLoader(tf.keras.utils.Sequence):
         return gray_imgs, color_imgs, gray_lab_imgs, color_lab_imgs, encoded_labels, labels
     
     def on_epoch_end(self):
-        ' called on epoch end '
+        """On epoch end shuffles data if training"""
         
         # shuffle
         if not self.training:
             self.df = self.df.sample(frac=1.0, random_state=self.seed)
             
     def _load_gray_img(self, img_path: str):
+        """Loads gray image from given path."""
         
         return np.reshape(skimage.transform.resize(skimage.io.imread(img_path), self.dim), (*self.dim, 1) )
     
     def _load_color_img(self, img_path: str):
+        """Loads color image from given path."""
         
         color_img = skimage.transform.resize(skimage.io.imread(img_path), self.dim)
         # TODO apply augmentations
@@ -104,6 +135,7 @@ class DataLoader(tf.keras.utils.Sequence):
         
     @staticmethod
     def _build_label_indices(labels: pd.Series) -> pd.Series:
+        """Build label indices."""
         
         unique = sorted(np.unique(labels))
         label2index = { l: i for i, l in enumerate(unique) }
